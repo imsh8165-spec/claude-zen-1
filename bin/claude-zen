@@ -1,0 +1,140 @@
+#!/usr/bin/env bash
+# Launch Claude Code against the local Zen proxy.
+#
+# Starts the proxy if it isn't up, picks a model that's actually alive, and
+# forces every model slot to it before exec'ing the real `claude`.
+set -euo pipefail
+
+MODEL="${DEFAULT_ZEN_MODEL:-deepseek-v4-flash-free}"
+MODEL_EXPLICIT=0
+PORT="${ZEN_PROXY_PORT:-8787}"
+HEALTH="http://127.0.0.1:${PORT}/health"
+DIR="$HOME/.zen-claude"
+START="$DIR/start.sh"
+LOG="$DIR/proxy.log"
+
+usage() {
+  cat <<'EOF'
+Usage: claude-zen [-m <model>] [--status] [-- claude args...]
+
+  -m <model>   Model to use (default: deepseek-v4-flash-free)
+  --status     Print proxy status, the Zen catalog, and probe the model
+  -h, --help   Show this help
+
+Everything else is forwarded to the real `claude`.
+EOF
+}
+
+key() {
+  grep '^ZEN_API_KEY=' "$DIR/.env" | cut -d= -f2-
+}
+
+proxy_up() {
+  curl -sf --max-time 2 "$HEALTH" >/dev/null 2>&1
+}
+
+start_proxy() {
+  if proxy_up; then return; fi
+  echo "starting zen-proxy..."
+  [ -f "$START" ] || { echo "error: $START not found -- run install.sh" >&2; exit 1; }
+  nohup "$START" >>"$LOG" 2>&1 &
+  for _ in $(seq 1 40); do
+    proxy_up && { echo "zen-proxy up (http://127.0.0.1:${PORT})"; return; }
+    sleep 0.5
+  done
+  echo "error: zen-proxy failed to start; see $LOG" >&2
+  exit 1
+}
+
+# One cheap no-tools call. Free models come and go, so "is it in the catalog"
+# is not the same question as "does it answer".
+model_alive() {
+  curl -sf --max-time 25 https://opencode.ai/zen/v1/chat/completions \
+    -H "Authorization: Bearer $(key)" -H 'content-type: application/json' \
+    -d "{\"model\":\"$1\",\"max_tokens\":600,\"messages\":[{\"role\":\"user\",\"content\":\"hi\"}]}" \
+    2>/dev/null | grep -q '"choices"'
+}
+
+free_models() {
+  curl -sf --max-time 10 https://opencode.ai/zen/v1/models \
+    -H "Authorization: Bearer $(key)" 2>/dev/null \
+    | python3 -c 'import sys,json
+for m in json.load(sys.stdin).get("data",[]):
+    i=m.get("id","")
+    if i.endswith("-free"): print(i)' 2>/dev/null
+}
+
+# Zen rotates its free lineup constantly and dead entries stay in the catalog,
+# so a hardcoded default goes stale on its own. Fall back to whatever is up.
+resolve_model() {
+  if model_alive "$MODEL"; then return; fi
+
+  if [ "$MODEL_EXPLICIT" = 1 ]; then
+    echo "error: model '$MODEL' is not responding." >&2
+    echo "       free models currently listed:" >&2
+    free_models | sed 's/^/         /' >&2
+    exit 1
+  fi
+
+  echo "note: '$MODEL' is not responding, looking for a live free model..." >&2
+  for m in $(free_models); do
+    [ "$m" = "$MODEL" ] && continue
+    if model_alive "$m"; then
+      echo "note: using '$m' instead" >&2
+      MODEL="$m"
+      return
+    fi
+  done
+
+  echo "error: no free model is responding right now. Try again later." >&2
+  exit 1
+}
+
+status() {
+  proxy_up && echo "proxy: UP (http://127.0.0.1:${PORT})" || echo "proxy: DOWN"
+  echo ""
+  echo "Free models in the Zen catalog:"
+  free_models | sed 's/^/  - /' || echo "  (catalog fetch failed)"
+  echo ""
+  printf "Probing '%s': " "$MODEL"
+  model_alive "$MODEL" && echo "responding" || echo "NOT responding"
+}
+
+while [ $# -gt 0 ]; do
+  case "$1" in
+    -m)       MODEL="$2"; MODEL_EXPLICIT=1; shift 2 ;;
+    -m=*)     MODEL="${1#-m=}"; MODEL_EXPLICIT=1; shift ;;
+    --status) status; exit 0 ;;
+    -h|--help) usage; exit 0 ;;
+    --)       shift; break ;;
+    *)        break ;;
+  esac
+done
+
+[ -f "$DIR/.env" ] || { echo "error: $DIR/.env not found -- run install.sh" >&2; exit 1; }
+
+start_proxy
+resolve_model
+
+export ANTHROPIC_BASE_URL="http://127.0.0.1:${PORT}"
+export ANTHROPIC_AUTH_TOKEN="zen-local-proxy"
+export ANTHROPIC_MODEL="$MODEL"
+export ANTHROPIC_SMALL_FAST_MODEL="$MODEL"
+export ANTHROPIC_DEFAULT_OPUS_MODEL="$MODEL"
+export ANTHROPIC_DEFAULT_SONNET_MODEL="$MODEL"
+export ANTHROPIC_DEFAULT_HAIKU_MODEL="$MODEL"
+export CLAUDE_CODE_MAX_CONTEXT_TOKENS=128000
+export CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC=1
+export ENABLE_TOOL_SEARCH=true
+unset ANTHROPIC_API_KEY
+
+# An `env` block in ~/.claude/settings.json OVERRIDES exported environment
+# variables, so on any machine that has been pointed at another relay the
+# exports above are silently ignored. CLI flags outrank settings.json.
+SETTINGS_JSON="$(printf '{"env":{"ANTHROPIC_MODEL":"%s","ANTHROPIC_SMALL_FAST_MODEL":"%s","ANTHROPIC_DEFAULT_OPUS_MODEL":"%s","ANTHROPIC_DEFAULT_SONNET_MODEL":"%s","ANTHROPIC_DEFAULT_HAIKU_MODEL":"%s"}}' \
+  "$MODEL" "$MODEL" "$MODEL" "$MODEL" "$MODEL")"
+
+CLAUDE_BIN="$(command -v claude || true)"
+[ -n "$CLAUDE_BIN" ] || { echo "error: claude not found on PATH" >&2; exit 1; }
+
+exec "$CLAUDE_BIN" --model "$MODEL" --settings "$SETTINGS_JSON" "$@"
