@@ -18,7 +18,7 @@ Windows works under WSL only.
 ## Install
 
 ```bash
-git clone https://github.com/YOURNAME/claude-zen
+git clone https://github.com/Itsme23476/claude-zen
 cd claude-zen
 ./install.sh          # asks for your Zen API key
 ./verify.sh           # proves it works
