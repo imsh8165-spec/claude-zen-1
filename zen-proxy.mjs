@@ -32,7 +32,7 @@ const textOf = (content) =>
     : (content ?? []).filter((b) => b.type === 'text').map((b) => b.text).join('')
 
 
-// DeepSeek-style reasoning models reject a replayed assistant turn unless its
+// MiMo-style reasoning models reject a replayed assistant turn unless its
 // original `reasoning_content` comes back with it. Claude Code has no such
 // concept, so we stash it here and re-attach on the way back up. Keyed by
 // tool_call id when the turn called tools, and by a hash of the reply text
