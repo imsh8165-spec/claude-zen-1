@@ -8,7 +8,7 @@ set -uo pipefail
 DIR="$HOME/.zen-claude"
 PORT="${ZEN_PROXY_PORT:-8787}"
 BASE="http://127.0.0.1:${PORT}"
-MODEL="${DEFAULT_ZEN_MODEL:-MiMo-v2.5-free}"
+MODEL="${DEFAULT_ZEN_MODEL:-MiMo-V2.5-free}"
 FULL=0
 [ "${1:-}" = "--full" ] && FULL=1
 
