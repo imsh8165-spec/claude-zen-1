@@ -1,10 +1,10 @@
-# claude-zen
+# claude-zen-1
 
 Run **Claude Code** on free models through [OpenCode Zen](https://opencode.ai) —
 a small local proxy that translates Zen's OpenAI-style API into the Anthropic
 protocol Claude Code speaks.
 
-Default model is `deepseek-v4-flash-free`. Cost: $0.
+Default model is `MiMo-v2.5-free`. Cost: $0.
 
 > Unofficial community tool. Not affiliated with or endorsed by Anthropic or
 > OpenCode. It relies on a third party's free tier, which can change or
@@ -18,8 +18,8 @@ Windows works under WSL only.
 ## Install
 
 ```bash
-git clone https://github.com/Itsme23476/claude-zen
-cd claude-zen
+git clone https://github.com/imsh8165-spec/claude-zen-1
+cd claude-zen-1
 ./install.sh          # asks for your Zen API key
 ./verify.sh           # proves it works
 ```
@@ -30,7 +30,7 @@ Get a free key at [opencode.ai](https://opencode.ai). It looks like `sk-` plus
 Then:
 
 ```bash
-claude-zen
+claude-zen-1
 ```
 
 That's it. The proxy auto-starts if it isn't running.
@@ -38,14 +38,14 @@ That's it. The proxy auto-starts if it isn't running.
 ## Usage
 
 ```bash
-claude-zen                       # interactive, default free model
-claude-zen -m longcat-2.0-free   # pick a specific model
-claude-zen -p "explain this bug" # one-shot, no TUI
-claude-zen --status              # proxy state + live free-model list
+claude-zen-1                       # interactive, default free model
+claude-zen-1 -m longcat-2.0-free   # pick a specific model
+claude-zen-1 -p "explain this bug" # one-shot, no TUI
+claude-zen-1 --status              # proxy state + live free-model list
 ```
 
 Anything after those flags is passed straight through to `claude`, so
-`claude-zen --permission-mode acceptEdits` and friends all work.
+`claude-zen-1 --permission-mode acceptEdits` and friends all work.
 
 **The `/model` picker won't list these models.** Switching means quitting and
 relaunching with a different `-m`. That's a Claude Code limitation.
@@ -85,7 +85,7 @@ non-obvious, intermittent ways.
 
 ### 1. The `reasoning_content` cache and its stub fallback
 
-DeepSeek V4 is a reasoning model. Replay an assistant turn without its original
+MiMo v2.5 is a reasoning model. Replay an assistant turn without its original
 `reasoning_content` and the request is rejected:
 
 ```
@@ -131,7 +131,7 @@ the current free list.
 An old copy of the proxy. Pull the latest and re-run `./install.sh`.
 
 **`Unable to connect to API (ConnectionRefused)`**
-You ran `claude`, not `claude-zen`. The launcher starts the proxy for you.
+You ran `claude`, not `claude-zen-1`. The launcher starts the proxy for you.
 
 **Model answers nothing, `"stop_reason":"max_tokens"`**
 Reasoning models spend their token budget thinking before emitting text. Not a
@@ -141,15 +141,15 @@ bug — raise `max_tokens`.
 Expected. The launcher sets `ANTHROPIC_AUTH_TOKEN` to reach the local proxy.
 Harmless in this mode.
 
-**It works with `claude-zen` but plain `claude` behaves oddly**
+**It works with `claude-zen-1` but plain `claude` behaves oddly**
 An `env` block in `~/.claude/settings.json` overrides exported environment
-variables. `claude-zen` beats it by passing the model as a CLI flag. If that
+variables. `claude-zen-1` beats it by passing the model as a CLI flag. If that
 file pins `ANTHROPIC_*_MODEL` values from some earlier setup, they're still
 affecting your normal `claude` sessions.
 
 **A free model stopped working**
 Zen rotates its free lineup and dead entries stay listed in the catalog.
-`claude-zen` probes the model on launch and automatically falls back to a live
+`claude-zen-1` probes the model on launch and automatically falls back to a live
 free one. Force a specific model with `-m`.
 
 ---
@@ -164,7 +164,7 @@ free one. Force a specific model with `-m`.
 ~/.local/bin/claude-zen      the launcher
 ```
 
-Uninstall: `rm -rf ~/.zen-claude ~/.local/bin/claude-zen`
+Uninstall: `rm -rf ~/.zen-claude ~/.local/bin/claude-zen-1`
 
 ## License
 
