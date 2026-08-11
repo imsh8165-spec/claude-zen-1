@@ -4,7 +4,7 @@ Run **Claude Code** on free models through [OpenCode Zen](https://opencode.ai) â
 a small local proxy that translates Zen's OpenAI-style API into the Anthropic
 protocol Claude Code speaks.
 
-Default model is `MiMo-v2.5-free`. Cost: $0.
+Default model is `MiMo-V2.5-free`. Cost: $0.
 
 > Unofficial community tool. Not affiliated with or endorsed by Anthropic or
 > OpenCode. It relies on a third party's free tier, which can change or
