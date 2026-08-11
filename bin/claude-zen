@@ -5,7 +5,7 @@
 # forces every model slot to it before exec'ing the real `claude`.
 set -euo pipefail
 
-MODEL="${DEFAULT_ZEN_MODEL:-MiMo-v2.5-free}"
+MODEL="${DEFAULT_ZEN_MODEL:-MiMo-V2.5-free}"
 MODEL_EXPLICIT=0
 PORT="${ZEN_PROXY_PORT:-8787}"
 HEALTH="http://127.0.0.1:${PORT}/health"
